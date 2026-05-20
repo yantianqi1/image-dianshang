@@ -1,0 +1,40 @@
+{
+  "api_base": "https://api2.opcl.cloud",
+  "results": [
+    {
+      "name": "models",
+      "ok": true,
+      "count": 35,
+      "sample": [
+        "claude-haiku-4-5-20251001",
+        "claude-haiku-4-5-20251001-thinking",
+        "claude-opus-4-6",
+        "claude-opus-4-6-thinking",
+        "claude-opus-4-7"
+      ]
+    },
+    {
+      "name": "text_chat_gpt_5_4",
+      "ok": true,
+      "content": "OK"
+    },
+    {
+      "name": "txt2img_landscape",
+      "ok": true,
+      "url": "https://api.image2.mom/images/2026/05/20/1779288010_59d466ae9c3eea42d67988f2ecb95439.png",
+      "file": "dogfood-output/api-smoke/txt2img_landscape.png",
+      "width": 1536,
+      "height": 1024,
+      "seconds": 26.48
+    },
+    {
+      "name": "img_input_edit",
+      "ok": true,
+      "url": "https://api.image2.mom/images/2026/05/20/1779288070_2446ee3a2ca0758ffe4c06b82ad9bd28.png",
+      "file": "dogfood-output/api-smoke/img_input_edit.png",
+      "width": 1254,
+      "height": 1254,
+      "seconds": 59.43
+    }
+  ]
+}

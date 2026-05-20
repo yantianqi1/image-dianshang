@@ -1,0 +1,278 @@
+{
+  "requests": [
+    {
+      "max_tokens": 4096,
+      "messages": [
+        {
+          "content": "test image\nComposition/output aspect ratio requirement: create the final image in 3:2 aspect ratio (3:2). This ratio is mandatory. Fit the layout to this canvas; do not crop the main product. ",
+          "role": "user"
+        }
+      ],
+      "model": "gpt-image-2",
+      "n": 1,
+      "quality": "medium",
+      "size": "1536x1024"
+    },
+    {
+      "max_tokens": 4096,
+      "messages": [
+        {
+          "content": [
+            {
+              "image_url": {
+                "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+              },
+              "type": "image_url"
+            },
+            {
+              "text": "Edit this product photo for e-commerce use. IMPORTANT: Keep the product exactly as it is - same shape, color, design, every detail unchanged. Only improve: background (clean white/studio gradient), lighting (professional studio), composition, and image quality. Create a hero/main product image, single clean shot, white background, centered product. No text overlay, pure visual product image. clean product hero\nComposition/output aspect ratio requirement: create the final image in 2:3 aspect ratio (2:3). This ratio is mandatory. Fit the layout to this canvas; do not crop the main product. ",
+              "type": "text"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "model": "gpt-image-2",
+      "n": 4,
+      "quality": "low",
+      "size": "1024x1536"
+    },
+    {
+      "max_tokens": 4096,
+      "messages": [
+        {
+          "content": [
+            {
+              "image_url": {
+                "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+              },
+              "type": "image_url"
+            },
+            {
+              "text": "Edit this product photo for e-commerce use. IMPORTANT: Keep the product exactly as it is - same shape, color, design, every detail unchanged. Only improve: background (clean white/studio gradient), lighting (professional studio), composition, and image quality. Create a hero/main product image, single clean shot, white background, centered product. No text overlay, pure visual product image. clean product hero\nComposition/output aspect ratio requirement: create the final image in 2:3 aspect ratio (2:3). This ratio is mandatory. Fit the layout to this canvas; do not crop the main product. ",
+              "type": "text"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "model": "gpt-image-2",
+      "n": 2,
+      "quality": "low",
+      "size": "1024x1536"
+    },
+    {
+      "max_tokens": 4096,
+      "messages": [
+        {
+          "content": [
+            {
+              "image_url": {
+                "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+              },
+              "type": "image_url"
+            },
+            {
+              "image_url": {
+                "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+              },
+              "type": "image_url"
+            },
+            {
+              "text": "Use the uploaded reference design image ONLY as visual style inspiration: color palette, typography feeling, layout structure, composition rhythm, lighting mood, decorative elements, background treatment, and e-commerce design language. Use the uploaded product material images as the actual product subject. IMPORTANT: preserve the user product exactly - same shape, color, material, logo, texture, proportions, and every detail. Do not copy or keep the product from the reference design image. Create a new commercial design for the user product. Reference design image is provided: analyze and transfer its visual language; do not treat it as the product source. Product material images are provided: the user product must be the main subject. Style strength: standard. Recreate the reference image's overall color system, composition logic, spacing, typography feeling, and decorative style while making a new layout for the user product. Output type: e-commerce detail/feature image with clear selling points and polished commercial presentation. If text is requested, create clean readable Chinese e-commerce copy areas; do not generate garbled text. If no specific text is requested, use minimal generic design blocks or no text. premium poster\nComposition/output aspect ratio requirement: create the final image in 1:1 aspect ratio (1:1). This ratio is mandatory. Fit the layout to this canvas; do not crop the main product. ",
+              "type": "text"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "model": "gpt-image-2",
+      "n": 1,
+      "quality": "high",
+      "size": "1024x1024"
+    },
+    {
+      "max_tokens": 4096,
+      "messages": [
+        {
+          "content": [
+            {
+              "image_url": {
+                "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+              },
+              "type": "image_url"
+            },
+            {
+              "text": "Create e-commerce clothing images from the uploaded garment/product photos. IMPORTANT: preserve the garment exactly as uploaded - same design, silhouette, pattern, color, fabric texture, logo, seams, buttons, and all details. Do not copy the input photo unchanged; create a new commercial output according to the selected clothing mode. Basic clothing image set task: no human model. Create clean e-commerce product images such as white-background hero shot, flat lay or hanger/mannequin display, front/back view, fabric texture close-up, collar/sleeve/hem/detail closeups. The uploaded garment must be the subject and must not become a model try-on image. white background\nComposition/output aspect ratio requirement: create the final image in 1:1 aspect ratio (1:1). This ratio is mandatory. Fit the layout to this canvas; do not crop the main product. ",
+              "type": "text"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "model": "gpt-image-2",
+      "n": 1,
+      "quality": "high",
+      "size": "1024x1024"
+    },
+    {
+      "max_tokens": 4096,
+      "messages": [
+        {
+          "content": [
+            {
+              "image_url": {
+                "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+              },
+              "type": "image_url"
+            },
+            {
+              "text": "Retouch and enhance this product photo. IMPORTANT: The product must look identical to the original - preserve every detail of its appearance. Only enhance: sharpness, lighting balance, remove dust/blemishes, clean background, improve overall image quality. Replace background with pure white. remove dust\nComposition/output aspect ratio requirement: create the final image in 1:1 aspect ratio (1:1). This ratio is mandatory. Fit the layout to this canvas; do not crop the main product. ",
+              "type": "text"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "model": "gpt-image-2",
+      "n": 1,
+      "quality": "high",
+      "size": "1024x1024"
+    },
+    {
+      "max_tokens": 4096,
+      "messages": [
+        {
+          "content": [
+            {
+              "image_url": {
+                "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+              },
+              "type": "image_url"
+            },
+            {
+              "text": "[Auxiliary reference image attached below. Use it as soft guidance for the intended edit area; it is not a pixel-level mask.]",
+              "type": "text"
+            },
+            {
+              "image_url": {
+                "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+              },
+              "type": "image_url"
+            },
+            {
+              "text": "change background to blue\nComposition/output aspect ratio requirement: create the final image in 3:2 aspect ratio (3:2). This ratio is mandatory. Fit the layout to this canvas; do not crop the main product. ",
+              "type": "text"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "model": "gpt-image-2",
+      "n": 1,
+      "quality": "high",
+      "size": "1536x1024"
+    },
+    {
+      "max_tokens": 1024,
+      "messages": [
+        {
+          "content": "You are a professional AI image prompt optimization expert. Optimize short descriptions into detailed, high-quality English image generation prompts. Output pure prompt text only.",
+          "role": "system"
+        },
+        {
+          "content": "short",
+          "role": "user"
+        }
+      ],
+      "model": "gpt-5.4"
+    },
+    {
+      "max_tokens": 1024,
+      "messages": [
+        {
+          "content": "You are an image analysis expert. Reverse-engineer a detailed English prompt from the given image. Output pure prompt text only.",
+          "role": "system"
+        },
+        {
+          "content": [
+            {
+              "text": "请根据这张图片反推出详细的图像生成提示词。",
+              "type": "text"
+            },
+            {
+              "image_url": {
+                "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+              },
+              "type": "image_url"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "model": "gpt-5.4"
+    }
+  ],
+  "results": [
+    {
+      "details": {},
+      "name": "设置弹窗与连接测试",
+      "ok": true
+    },
+    {
+      "details": {},
+      "name": "文字生图",
+      "ok": true
+    },
+    {
+      "details": {},
+      "name": "商品图批量生成",
+      "ok": true
+    },
+    {
+      "details": {},
+      "name": "风格复刻",
+      "ok": true
+    },
+    {
+      "details": {},
+      "name": "服装基础套图",
+      "ok": true
+    },
+    {
+      "details": {},
+      "name": "服装模特试穿 UI 切换",
+      "ok": true
+    },
+    {
+      "details": {},
+      "name": "图片精修",
+      "ok": true
+    },
+    {
+      "details": {},
+      "name": "图片编辑",
+      "ok": true
+    },
+    {
+      "details": {},
+      "name": "AI 润色",
+      "ok": true
+    },
+    {
+      "details": {},
+      "name": "反推提示词",
+      "ok": true
+    },
+    {
+      "details": {},
+      "name": "案例专区",
+      "ok": true
+    },
+    {
+      "details": {},
+      "name": "历史记录",
+      "ok": true
+    }
+  ]
+}
