@@ -1,6 +1,14 @@
 # ImageForge 电商生图端
 
-面向用户的静态电商生图前端。用户在浏览器本地填写 newapi 密钥后，页面直接请求 `https://api2.opcl.cloud` 的 OpenAI 兼容接口，后端链路接入 `chatgpt2api` 生图代理。
+面向用户的静态电商生图前端。用户在浏览器本地填写 newapi 密钥后，页面会在 newapi 地址池中自动匹配可用的 OpenAI 兼容接口，后端链路接入 `chatgpt2api` 生图代理。
+
+内置地址池：
+
+- `https://iai.iisbo.com/v1`
+- `https://ai.iisbo.com/v1`
+- `https://api2.opcl.cloud/v1`
+
+首次保存密钥时，前端会随机尝试地址池的 `/models` 接口，找到可用地址后把“密钥指纹 -> 地址”保存在浏览器 localStorage。后续请求直接使用已记忆地址；如果该地址请求失败，会继续尝试其他地址并在成功后更新记忆。
 
 ## 本地运行
 

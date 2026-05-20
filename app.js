@@ -1,6 +1,5 @@
 /* ImageForge Studio — App Logic (Extended) */
 
-const API_BASE = 'https://api2.opcl.cloud';
 const DEFAULT_IMAGE_MAX_TOKENS = 4096;
 const MAX_IMAGE_BATCH_SIZE = 4;
 const DB_NAME = 'imageforge';
@@ -50,9 +49,9 @@ async function callImageChatAPI(messages, configOverride, options) {
   const cfg = configOverride || getConfig();
   const key = cfg.apiKey;
   if (!key) { showToast('请先配置 API Key'); openSettings(); return null; }
-  const res = await fetch(`${API_BASE}/v1/chat/completions`, {
+  const res = await ImageForgeApi.fetchOpenAI(key, '/chat/completions', {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(buildImageChatBody(messages, options))
   });
   if (!res.ok) { const t = await res.text(); throw new Error(parseApiError(t, res.status)); }
@@ -74,7 +73,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function checkFirstRun() { const cfg = getConfig(); if (!cfg.apiKey) setTimeout(() => openSettings(), 500); updateEndpointIndicator(); }
-function updateEndpointIndicator() { const cfg = getConfig(); const el = document.getElementById('endpoint-indicator'); if (!el) return; el.textContent = cfg.apiKey ? '已连接' : '未配置密钥'; el.className = 'endpoint-indicator' + (cfg.apiKey ? ' configured' : ' unconfigured'); }
+function endpointLabel(endpoint) {
+  if (!endpoint) return '';
+  try { return new URL(endpoint).host; } catch { return endpoint.replace(/^https?:\/\//, ''); }
+}
+function updateEndpointIndicator() {
+  const cfg = getConfig();
+  const el = document.getElementById('endpoint-indicator');
+  if (!el) return;
+  const endpoint = cfg.apiKey ? ImageForgeApi.getRememberedEndpoint(cfg.apiKey) : '';
+  el.textContent = endpoint ? `已连接 ${endpointLabel(endpoint)}` : (cfg.apiKey ? '密钥已保存' : '未配置密钥');
+  el.className = 'endpoint-indicator' + (cfg.apiKey ? ' configured' : ' unconfigured');
+}
 function friendlyError(err) { const msg = err.message || String(err); if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) return '网络错误：无法连接到服务。'; if (msg.includes('CORS')) return '跨域错误 (CORS)'; return msg; }
 
 // ===== IndexedDB =====
@@ -91,11 +101,51 @@ function clearAllHistory() { return new Promise(res => { const tx = db.transacti
 // ===== Settings =====
 function getConfig() { return { apiKey: localStorage.getItem('if_apikey') || '', polishModel: localStorage.getItem('if_polish_model') || '' }; }
 function loadSettings() { const c = getConfig(); const k = document.getElementById('setting-apikey'); const m = document.getElementById('setting-polish-model'); if (k) k.value = c.apiKey; if (m) m.value = c.polishModel; }
-function saveSettings() { const k = document.getElementById('setting-apikey'); const m = document.getElementById('setting-polish-model'); if (k) localStorage.setItem('if_apikey', k.value.trim()); if (m) localStorage.setItem('if_polish_model', m.value.trim()); closeSettings(); updateEndpointIndicator(); showToast('配置已保存'); }
+async function saveSettings() {
+  const k = document.getElementById('setting-apikey');
+  const m = document.getElementById('setting-polish-model');
+  const key = k?.value.trim() || '';
+  if (m) localStorage.setItem('if_polish_model', m.value.trim());
+  if (key) {
+    const status = document.getElementById('conn-status');
+    if (status) { status.textContent = '正在匹配 newapi 地址…'; status.className = 'conn-status'; }
+    try {
+      const resolved = await ImageForgeApi.resolveApiEndpoint(key);
+      if (k) localStorage.setItem('if_apikey', key);
+      if (status) { status.textContent = `✓ 已匹配 ${endpointLabel(resolved.endpoint)}`; status.className = 'conn-status ok'; }
+      showToast(`配置已保存：${endpointLabel(resolved.endpoint)}`);
+    } catch (err) {
+      if (status) { status.textContent = `✗ ${friendlyError(err)}`; status.className = 'conn-status err'; }
+      updateEndpointIndicator();
+      showToast('地址匹配失败: ' + friendlyError(err), 5000);
+      return;
+    }
+  } else {
+    if (k) localStorage.setItem('if_apikey', '');
+    showToast('配置已保存');
+  }
+  closeSettings();
+  updateEndpointIndicator();
+}
 function openSettings() { loadSettings(); document.getElementById('settings-modal').style.display = 'flex'; }
 function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; }
 function closeSettingsOutside(e) { if (e.target === e.currentTarget) closeSettings(); }
-async function testConnection() { const status = document.getElementById('conn-status'); const apiKey = document.getElementById('setting-apikey').value.trim(); if (!apiKey) { status.textContent = '✗ 请填写 API Key'; status.className = 'conn-status err'; return; } status.textContent = '测试中…'; status.className = 'conn-status'; try { const r = await fetch(`${API_BASE}/v1/models`, { headers: { 'Authorization': `Bearer ${apiKey}` }, signal: AbortSignal.timeout(10000) }); if (r.ok) { status.textContent = '✓ 连接正常'; status.className = 'conn-status ok'; } else { status.textContent = `✗ HTTP ${r.status}`; status.className = 'conn-status err'; } } catch (err) { status.textContent = `✗ ${friendlyError(err)}`; status.className = 'conn-status err'; } }
+async function testConnection() {
+  const status = document.getElementById('conn-status');
+  const apiKey = document.getElementById('setting-apikey').value.trim();
+  if (!apiKey) { status.textContent = '✗ 请填写 API Key'; status.className = 'conn-status err'; return; }
+  status.textContent = '测试中…';
+  status.className = 'conn-status';
+  try {
+    const resolved = await ImageForgeApi.resolveApiEndpoint(apiKey, { force: true });
+    status.textContent = `✓ 连接正常：${endpointLabel(resolved.endpoint)}`;
+    status.className = 'conn-status ok';
+    updateEndpointIndicator();
+  } catch (err) {
+    status.textContent = `✗ ${friendlyError(err)}`;
+    status.className = 'conn-status err';
+  }
+}
 function toggleKeyVis() { const i = document.getElementById('setting-apikey'); i.type = i.type === 'password' ? 'text' : 'password'; }
 
 // ===== Tabs =====
@@ -645,7 +695,7 @@ async function callChatAPI(systemPrompt, userContent, isVision) {
   const messages = [{ role: 'system', content: systemPrompt }];
   if (isVision) messages.push({ role: 'user', content: userContent });
   else messages.push({ role: 'user', content: userContent });
-  const res = await fetch(`${API_BASE}/v1/chat/completions`, { method: 'POST', headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model, messages, max_tokens: 1024 }) });
+  const res = await ImageForgeApi.fetchOpenAI(key, '/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, messages, max_tokens: 1024 }) });
   if (!res.ok) { const t = await res.text(); throw new Error(parseApiError(t, res.status)); }
   const data = await res.json();
   const raw = data.choices?.[0]?.message?.content?.trim() || '';
