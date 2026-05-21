@@ -1,0 +1,8 @@
+services:
+  imageforge:
+    build:
+      context: .
+    container_name: imageforge
+    restart: unless-stopped
+    ports:
+      - "5173:80"

@@ -22,6 +22,24 @@ python -m http.server 5173 --bind 127.0.0.1
 http://127.0.0.1:5173
 ```
 
+## Docker Compose 部署
+
+```bash
+docker compose up -d --build
+```
+
+默认访问：
+
+```text
+http://服务器IP:5173
+```
+
+停止：
+
+```bash
+docker compose down
+```
+
 ## 测试记录
 
 完整功能测试和真实上游 smoke 记录见：
