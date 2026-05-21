@@ -47,15 +47,50 @@ function imageCountBatches(count) {
 
 async function callImageChatAPI(messages, configOverride, options) {
   const cfg = configOverride || getConfig();
-  const key = cfg.apiKey;
-  if (!key) { showToast('请先配置 API Key'); openSettings(); return null; }
-  const res = await ImageForgeApi.fetchOpenAI(key, '/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildImageChatBody(messages, options))
+  if (!hasApiAccess(cfg)) { showToast('请先配置 API Key'); openSettings(); return null; }
+  const job = await ImageForgeApi.createRenderJob(
+    cfg.apiKey,
+    buildImageChatBody(messages, options),
+    options?.feature || 'image'
+  );
+  return imageResponseFromJob(await waitForRenderJob(job.jobId));
+}
+
+function waitForRenderJob(jobId) {
+  return new Promise((resolve, reject) => {
+    let source = null;
+    source = ImageForgeApi.connectRenderJobEvents(jobId, async (event) => {
+      if (event.type === 'completed') return settleRenderJob(source, jobId, resolve, reject);
+      if (event.type === 'failed') return settleRenderJob(source, jobId, resolve, reject);
+    }, () => console.warn('render job SSE disconnected', jobId));
   });
-  if (!res.ok) { const t = await res.text(); throw new Error(parseApiError(t, res.status)); }
-  return res.json();
+}
+
+async function settleRenderJob(source, jobId, resolve, reject) {
+  if (source) source.close();
+  try {
+    const job = await ImageForgeApi.getRenderJob(jobId);
+    if (job.status === 'completed') return resolve(job);
+    reject(renderJobError(job));
+  } catch (error) {
+    reject(error);
+  }
+}
+
+function imageResponseFromJob(job) {
+  const images = job?.result?.images || [];
+  if (job?.result?.endpoint) ImageForgeApi.rememberEndpoint(job.result.endpoint);
+  return { data: images.map(src => ({ url: src })), _job: { id: job.id, traceId: job.traceId } };
+}
+
+function renderJobError(job) {
+  const base = job?.error?.message || '生成任务失败';
+  const error = new Error(`${base} (traceId: ${job?.traceId || '-'}, jobId: ${job?.id || '-'})`);
+  error.details = job?.error?.details || {};
+  error.traceId = job?.traceId || '';
+  error.jobId = job?.id || '';
+  console.error('ImageForge render job failed', { jobId: error.jobId, traceId: error.traceId, details: error.details });
+  return error;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -64,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bindPromptCounter();
   setupDragDrop();
   initClothingModeUI();
-  checkFirstRun();
+  ImageForgeApi.loadRuntimeConfig().catch(err => console.warn('runtime config failed', err)).finally(checkFirstRun);
   const editSize = document.getElementById('edit-size');
   if (editSize) editSize.addEventListener('change', () => {
     const row = document.getElementById('edit-custom-size');
@@ -72,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-function checkFirstRun() { const cfg = getConfig(); if (!cfg.apiKey) setTimeout(() => openSettings(), 500); updateEndpointIndicator(); }
+function checkFirstRun() { const cfg = getConfig(); if (!hasApiAccess(cfg)) setTimeout(() => openSettings(), 500); updateEndpointIndicator(); }
 function endpointLabel(endpoint) {
   if (!endpoint) return '';
   try { return new URL(endpoint).host; } catch { return endpoint.replace(/^https?:\/\//, ''); }
@@ -81,9 +116,13 @@ function updateEndpointIndicator() {
   const cfg = getConfig();
   const el = document.getElementById('endpoint-indicator');
   if (!el) return;
-  const endpoint = cfg.apiKey ? ImageForgeApi.getRememberedEndpoint(cfg.apiKey) : '';
-  el.textContent = endpoint ? `已连接 ${endpointLabel(endpoint)}` : (cfg.apiKey ? '密钥已保存' : '未配置密钥');
-  el.className = 'endpoint-indicator' + (cfg.apiKey ? ' configured' : ' unconfigured');
+  const runtime = ImageForgeApi.getRuntimeConfig();
+  const endpoint = ImageForgeApi.getRememberedEndpoint();
+  const hasAccess = hasApiAccess(cfg);
+  if (endpoint) el.textContent = `已连接 ${endpointLabel(endpoint)}`;
+  else if (cfg.apiKey) el.textContent = '密钥已保存';
+  else el.textContent = runtime.apiKeyConfigured ? '后端密钥已配置' : '未配置密钥';
+  el.className = 'endpoint-indicator' + (hasAccess ? ' configured' : ' unconfigured');
 }
 function friendlyError(err) { const msg = err.message || String(err); if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) return '网络错误：无法连接到服务。'; if (msg.includes('CORS')) return '跨域错误 (CORS)'; return msg; }
 
@@ -100,6 +139,7 @@ function clearAllHistory() { return new Promise(res => { const tx = db.transacti
 
 // ===== Settings =====
 function getConfig() { return { apiKey: localStorage.getItem('if_apikey') || '', polishModel: localStorage.getItem('if_polish_model') || '' }; }
+function hasApiAccess(cfg) { return ImageForgeApi.hasApiAccess(cfg?.apiKey); }
 function loadSettings() { const c = getConfig(); const k = document.getElementById('setting-apikey'); const m = document.getElementById('setting-polish-model'); if (k) k.value = c.apiKey; if (m) m.value = c.polishModel; }
 async function saveSettings() {
   const k = document.getElementById('setting-apikey');
@@ -133,11 +173,11 @@ function closeSettingsOutside(e) { if (e.target === e.currentTarget) closeSettin
 async function testConnection() {
   const status = document.getElementById('conn-status');
   const apiKey = document.getElementById('setting-apikey').value.trim();
-  if (!apiKey) { status.textContent = '✗ 请填写 API Key'; status.className = 'conn-status err'; return; }
+  if (!apiKey && !ImageForgeApi.getRuntimeConfig().apiKeyConfigured) { status.textContent = '✗ 请填写 API Key'; status.className = 'conn-status err'; return; }
   status.textContent = '测试中…';
   status.className = 'conn-status';
   try {
-    const resolved = await ImageForgeApi.resolveApiEndpoint(apiKey, { force: true });
+    const resolved = await ImageForgeApi.resolveApiEndpoint(apiKey);
     status.textContent = `✓ 连接正常：${endpointLabel(resolved.endpoint)}`;
     status.className = 'conn-status ok';
     updateEndpointIndicator();
@@ -346,7 +386,7 @@ async function aiWrite(tab) {
   const el = document.getElementById(`${tab}-prompt`);
   const text = el.value.trim();
   const cfg = getConfig();
-  if (!cfg.apiKey) { showToast('请先配置 API Key'); return openSettings(); }
+  if (!hasApiAccess(cfg)) { showToast('请先配置 API Key'); return openSettings(); }
   const sysPrompts = {
     product: 'You are an e-commerce image optimization expert. Generate an English prompt for the AI image editor. CRITICAL RULE: The product appearance, shape, color, design, and details must remain EXACTLY as in the original uploaded image — do NOT change, redesign, or reimagine the product itself. Only optimize: background (clean white/gradient), lighting (studio quality), composition (centered, best angle), and overall image quality. Output pure prompt only, no explanation.',
     style: 'You are a senior e-commerce visual designer. Generate a SHORT English prompt for style replication using two roles: reference design image = style/layout/color/font/composition inspiration; product material images = the exact product to keep. The output should transfer the reference image visual style to the user product, not copy the reference product. Preserve the user product appearance exactly. Mention clean commercial layout and readable text. Output pure prompt only.',
@@ -375,7 +415,7 @@ async function generateNew(tab) {
   const promptEl = document.getElementById(`${tab}-prompt`);
   const prompt = promptEl ? promptEl.value.trim() : '';
   const cfg = getConfig();
-  if (!cfg.apiKey) { showToast('请先配置 API Key'); return openSettings(); }
+  if (!hasApiAccess(cfg)) { showToast('请先配置 API Key'); return openSettings(); }
 
   // Get size
   const panel = document.getElementById(`tab-${tab}`).querySelector('.control-panel');
@@ -431,7 +471,7 @@ async function generateNew(tab) {
       // Add text prompt
       userContent.push({ type: 'text', text: fullPrompt || 'Generate a product image' });
       const messages = [{ role: 'user', content: userContent }];
-      tasks.push(callImageChatAPI(messages, cfg, { size: size.apiSize, quality, n: batchSize }));
+      tasks.push(callImageChatAPI(messages, cfg, { size: size.apiSize, quality, n: batchSize, feature: tab }));
     }
 
     const results = await Promise.allSettled(tasks);
@@ -691,7 +731,7 @@ const REVERSE_SYSTEM = `You are an image analysis expert. Reverse-engineer a det
 
 async function callChatAPI(systemPrompt, userContent, isVision) {
   const cfg = getConfig(); const key = cfg.apiKey; const model = cfg.polishModel || 'gpt-5.4';
-  if (!key) { showToast('请先配置 API Key'); openSettings(); return null; }
+  if (!hasApiAccess(cfg)) { showToast('请先配置 API Key'); openSettings(); return null; }
   const messages = [{ role: 'system', content: systemPrompt }];
   if (isVision) messages.push({ role: 'user', content: userContent });
   else messages.push({ role: 'user', content: userContent });
@@ -754,7 +794,7 @@ function selectQuality(btn) { btn.parentElement.querySelectorAll('.quality-btn')
 // ===== Generate (original) =====
 async function generateImage() {
   let prompt = document.getElementById('gen-prompt').value.trim(); if (!prompt) return showToast('请输入描述');
-  const cfg = getConfig(); if (!cfg.apiKey) { showToast('请先配置 API Key'); return openSettings(); }
+  const cfg = getConfig(); if (!hasApiAccess(cfg)) { showToast('请先配置 API Key'); return openSettings(); }
   const panel = document.getElementById('tab-generate')?.querySelector('.control-panel') || document.getElementById('tab-generate');
   let size = getPanelSize(panel);
   const quality = getPanelQuality(panel);
@@ -765,7 +805,7 @@ async function generateImage() {
   try {
     prompt += getSizePrompt(size);
     const messages = [{ role: 'user', content: prompt }];
-    const data = await callImageChatAPI(messages, cfg, { size: size.apiSize, quality, n: 1 });
+    const data = await callImageChatAPI(messages, cfg, { size: size.apiSize, quality, n: 1, feature: 'generate' });
     const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
     let imgSrc = extractImage(data); if (!imgSrc) throw new Error('API 未返回图片数据');
     let b64 = imgSrc; if (imgSrc.startsWith('http')) { try { b64 = await blobToBase64(await (await fetch(imgSrc)).blob()); } catch {} }
@@ -823,7 +863,7 @@ function clearEditUpload(which) {
 
 async function editImage() {
   let prompt = document.getElementById('edit-prompt').value.trim(); if (!prompt) return showToast('请输入编辑指令'); if (!editSourceFile) return showToast('请上传原图');
-  const cfg = getConfig(); if (!cfg.apiKey) { showToast('请先配置 API Key'); return openSettings(); }
+  const cfg = getConfig(); if (!hasApiAccess(cfg)) { showToast('请先配置 API Key'); return openSettings(); }
   const sizeVal = document.getElementById('edit-size').value; const container = document.getElementById('edit-preview'); const loading = container.querySelector('.loading-state'); const result = container.querySelector('.result-state'); const empty = container.querySelector('.empty-state'); const btn = document.getElementById('btn-edit');
   container.classList.remove('empty'); empty.style.display = 'none'; result.style.display = 'none'; loading.style.display = 'flex';
   btn.disabled = true; btn.querySelector('.btn-content').style.display = 'none'; btn.querySelector('.btn-loading').style.display = 'flex';
@@ -852,7 +892,7 @@ async function editImage() {
     userContent.push({ type: 'text', text: prompt || 'Edit this image' });
     const messages = [{ role: 'user', content: userContent }];
 
-    const data = await callImageChatAPI(messages, cfg, { size: requestSize?.apiSize, quality, n: 1 });
+    const data = await callImageChatAPI(messages, cfg, { size: requestSize?.apiSize, quality, n: 1, feature: 'edit' });
     const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
     let imgSrc = extractImage(data); if (!imgSrc) throw new Error('API 未返回图片数据');
     let b64 = imgSrc; if (imgSrc.startsWith('http')) { try { b64 = await blobToBase64(await (await fetch(imgSrc)).blob()); } catch {} }

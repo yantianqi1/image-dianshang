@@ -1,7 +1,9 @@
 (async () => {
   const results = [];
   const requests = [];
+  const jobs = {};
   let imageId = 0;
+  let jobId = 0;
   const pngBytes = Uint8Array.from(
     atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="),
     (char) => char.charCodeAt(0),
@@ -18,23 +20,52 @@
 
   window.fetch = async (url, options = {}) => {
     const target = String(url);
-    if (target.includes("/v1/models")) {
-      return new Response(JSON.stringify({ data: [{ id: "gpt-image-2" }, { id: "gpt-5.4" }] }), {
+    if (target === "/api/runtime-config") {
+      return new Response(JSON.stringify({ apiKeyConfigured: false, endpoints: ["https://good.test/v1"] }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
     }
-    if (target.includes("/v1/chat/completions")) {
+    if (target === "/api/connection-test") {
+      return new Response(JSON.stringify({ endpoint: "https://good.test/v1" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (target === "/api/openai/chat-completions") {
       const body = JSON.parse(options.body || "{}");
-      requests.push(body);
-      if (body.model === "gpt-image-2") {
-        const count = Math.max(1, parseInt(body.n || 1, 10) || 1);
-        return new Response(JSON.stringify({ choices: [{ message: { content: imageMarkdown(count) } }] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
+      requests.push(body.payload);
       return new Response(JSON.stringify({ choices: [{ message: { content: "optimized prompt" } }] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (target === "/api/render-jobs") {
+      const body = JSON.parse(options.body || "{}");
+      requests.push(body.payload);
+      jobId += 1;
+      const id = `job_${jobId}`;
+      const count = Math.max(1, parseInt(body.payload?.n || 1, 10) || 1);
+      jobs[id] = {
+        id,
+        traceId: `trace_${jobId}`,
+        status: "completed",
+        result: { endpoint: "https://good.test/v1", images: imageMarkdown(count).match(/https:\/\/example\.test\/fake-\d+\.png/g) || [] },
+      };
+      return new Response(JSON.stringify({ jobId: id, traceId: jobs[id].traceId, status: "queued" }), {
+        status: 202,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const jobMatch = target.match(/^\/api\/render-jobs\/(job_\d+)$/);
+    if (jobMatch) {
+      return new Response(JSON.stringify(jobs[jobMatch[1]]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (target.includes("/v1/models")) {
+      return new Response(JSON.stringify({ data: [{ id: "gpt-image-2" }, { id: "gpt-5.4" }] }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
@@ -43,6 +74,18 @@
       return new Response(pngBytes, { status: 200, headers: { "Content-Type": "image/png" } });
     }
     return new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  window.EventSource = class {
+    constructor(url) {
+      this.handlers = {};
+      this.jobId = String(url).match(/render-jobs\/([^/]+)\/events/)?.[1];
+      setTimeout(() => this.emitCompleted(), 0);
+    }
+    addEventListener(type, handler) { this.handlers[type] = handler; }
+    close() {}
+    emitCompleted() {
+      this.handlers.job_event?.({ data: JSON.stringify({ type: "completed", jobId: this.jobId }) });
+    }
   };
 
   async function run(name, fn) {
@@ -67,6 +110,7 @@
   }
 
   localStorage.setItem("if_apikey", "test-key");
+  await window.ImageForgeApi.loadRuntimeConfig();
   await new Promise((resolve) => setTimeout(resolve, 100));
 
   await run("设置弹窗与连接测试", async () => {
