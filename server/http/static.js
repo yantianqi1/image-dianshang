@@ -54,7 +54,8 @@ function sendFile(res, filePath) {
 }
 
 function cacheControl(filePath) {
-  return path.basename(filePath) === "index.html" ? "no-cache" : "public, max-age=604800";
+  const mutableAssets = new Set(["index.html", "app.js", "api-client.js", "style.css"]);
+  return mutableAssets.has(path.basename(filePath)) ? "no-cache" : "public, max-age=604800";
 }
 
 function sendStatus(res, status) {
@@ -62,5 +63,4 @@ function sendStatus(res, status) {
   res.end(String(status));
 }
 
-module.exports = { serveStatic };
-
+module.exports = { cacheControl, serveStatic };
